@@ -16,56 +16,7 @@ El laboratorio plantea un escenario de resolución de incidentes en una infraest
 2. **VPC2 (Gestión y diagnóstico):** Aloja una instancia `cli-host` con salida a Internet para ejecutar diagnósticos con AWS CLI y emular peticiones de clientes externos.
 3. **Amazon S3:** Bucket de almacenamiento para recolectar los registros de tráfico generados por VPC Flow Logs.
 
-```mermaid
-graph TD
-    subgraph Internet_Transport ["Tránsito público (Internet)"]
-        Workstation["Estación de trabajo local\n(SSH / Navegador web)"]
-    end
-
-    subgraph VPC2_Mgmt ["VPC2: Diagnóstico y gestión"]
-        IGW2["Internet Gateway (VPC2)"]
-        CLIHost["CLI Host EC2\n(cli-host)"]
-        IGW2 --- CLIHost
-    end
-
-    subgraph VPC1_Prod ["VPC1: Producción MomPopCafe (vpc-0f6ac08b4c3d2c341)"]
-        IGW1["Internet Gateway\n(igw-012807cfae2615a2e)"]
-        
-        subgraph L3_Routing ["Capa 3: Enrutamiento"]
-            RT1["Route Table\n(rtb-0afb1902823e16b29)\n[Problema 1: Falta ruta 0.0.0.0/0]"]
-        end
-
-        subgraph L3_L4_Filtering ["Capa 3/4: Filtro de subred (Stateless)"]
-            NACL1["Network ACL\n(acl-0c23774cb86792c85)\n[Problema 2: Regla 40 DENY Port 22]"]
-        end
-
-        subgraph L4_Stateful ["Capa 4: Filtro de instancia (Stateful)"]
-            SG1["Security Group\n(WebSecurityGroup)\n[HTTP 80 / SSH 22 ALLOW]"]
-        end
-
-        subgraph Subnet_Pub ["Subnet pública (subnet-0bdcc75167d73e72d)"]
-            WebServer["MomPopCafe Web Server\nIP pública: 3.237.193.96\n(web-server)"]
-        end
-    end
-
-    subgraph Telemetry_S3 ["Telemetría y almacenamiento"]
-        S3Bucket["Amazon S3 Bucket\n(flowlog-robledo-1234)"]
-        FlowLogs["VPC Flow Logs Engine\n(fl-08c82e7031950e3b3)"]
-    end
-
-    Workstation -->|"1. Tráfico HTTP (Puerto 80)"| IGW1
-    Workstation -->|"2. Tráfico SSH (Puerto 22)"| IGW1
-    CLIHost -->|"Pruebas CLI y sondeo"| IGW1
-
-    IGW1 --- RT1
-    RT1 --- NACL1
-    NACL1 --- SG1
-    SG1 --- WebServer
-
-    VPC1_Prod -.->|"Captura de paquetes (ALL)"| FlowLogs
-    FlowLogs -->|"Entrega de logs (Gzip)"| S3Bucket
-    S3Bucket -.->|"Descarga y análisis"| CLIHost
-```
+![[Pasted image 20261016093046.png]]
 
 
 ## 2. Inicialización y configuración de AWS CLI
@@ -164,22 +115,7 @@ aws ec2 describe-route-tables \
 
 El paquete inicial de conexión `TCP SYN` del cliente entraba por el Internet Gateway y llegaba al servidor, pero al responder con `TCP SYN-ACK`, el router virtual de la VPC no tenía ninguna ruta para enviar paquetes hacia la IP pública del cliente y los descartaba silenciosamente.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Client as Cliente (Navegador)
-    participant IGW as Internet Gateway (igw-012807cfae2615a2e)
-    participant Router as VPC Router (rtb-0afb1902823e16b29)
-    participant Server as Web Server (3.237.193.96)
-
-    Client->>IGW: TCP SYN (Dst: 3.237.193.96:80)
-    IGW->>Router: 1:1 NAT hacia IP privada
-    Router->>Server: Entrega local (10.0.0.0/16)
-    Server-->>Router: TCP SYN-ACK (Dst: IP pública del cliente)
-    Note over Router: Solo existe ruta local 10.0.0.0/16.<br/>Falta ruta 0.0.0.0/0.
-    Router-xClient: Descarte silencioso (Red inalcanzable)
-    Note over Client: Timeout de conexión (ERR_CONNECTION_TIMED_OUT)
-```
+![[Pasted image 20261016094110.png]]
 
 Para corregir la asimetría de enrutamiento, agregamos la ruta por defecto hacia el Internet Gateway `igw-012807cfae2615a2e`:
 
