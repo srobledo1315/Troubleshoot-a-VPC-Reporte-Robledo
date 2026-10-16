@@ -164,32 +164,9 @@ La lista tenía tres reglas de entrada relevantes:
 - **Regla 100:** Permiso general (`ALLOW`) para todo el tráfico.
 - **Regla asterisco (\*):** Regla por defecto de descarte al final de la lista.
 
-Como $40 < 100$, cualquier paquete entrante dirigido al puerto 22 coincidía con la regla 40 y se descartaba en el borde de la subred, impidiendo que llegara al Security Group de la máquina:
+Como $40 < 100$, cualquier paquete entrante dirigido al puerto 22 coincidía con la regla 40 y se descartaba en el borde de la subred, impidiendo que llegara al Security Group de la máquina.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Admin as Estación de administración
-    participant NACL as Network ACL (acl-0c23774cb86792c85)
-    participant SG as Security Group (WebSecurityGroup)
-    participant SSHD as Servidor SSH (Puerto 22)
-
-    Note over Admin,SSHD: Antes de la corrección
-    Admin->>NACL: TCP SYN (Puerto destino 22)
-    Note over NACL: Coincide con regla 40 (DENY 22).<br/>Se descarta el paquete.
-    NACL-xSG: Descarte en el límite de la subred
-    Note over Admin: Connection timed out
-
-    Note over Admin,SSHD: Después de eliminar la regla 40
-    Admin->>NACL: TCP SYN (Puerto destino 22)
-    Note over NACL: Coincide con regla 100 (ALLOW ALL).
-    NACL->>SG: Entrega a la interfaz de la instancia
-    SG->>SSHD: TCP SYN permitido
-    SSHD-->>Admin: TCP SYN-ACK de respuesta (Stateful)
-    Admin->>SSHD: Sesión SSH establecida
-```
-
-### Remediación
+### Solución
 
 Eliminamos la regla bloqueadora 40 con el comando `delete-network-acl-entry`:
 
