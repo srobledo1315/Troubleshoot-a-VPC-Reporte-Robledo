@@ -6,8 +6,6 @@
 **Entorno:** AWS Academy Learner Lab (Amazon Linux 2, AWS CLI v2, Amazon VPC)  
 **Fecha:** Octubre de 2026  
 
----
-
 ## 1. Topología y arquitectura de red
 
 El laboratorio plantea un escenario de resolución de incidentes en una infraestructura con dos VPCs independientes sin interconexión por peering:
@@ -69,7 +67,6 @@ graph TD
     S3Bucket -.->|"Descarga y análisis"| CLIHost
 ```
 
----
 
 ## 2. Inicialización y configuración de AWS CLI
 
@@ -97,7 +94,6 @@ aws configure
 ![Configuración del perfil de AWS CLI](./images/Imagen%20pegada%20(2).png)
 *Figura 2: Registro de credenciales y configuración regional en AWS CLI.*
 
----
 
 ## 3. Instrumentación de observabilidad con VPC Flow Logs
 
@@ -134,7 +130,7 @@ Para confirmar que el agente de captura estuviera operativo y con permisos sufic
 
 A partir de este momento, cualquier intento de conexión a la VPC queda registrado en ventanas de agregación comprimidas con gzip.
 
----
+
 
 ## 4. Diagnóstico y solución del fallo web HTTP (Capa 3: Enrutamiento)
 
@@ -199,7 +195,6 @@ aws ec2 create-route \
 
 Con la ruta en su lugar, el router pudo enviar los paquetes `SYN-ACK` de vuelta al cliente, completando el handshake TCP y permitiendo acceder de inmediato a la aplicación web del café en `http://3.237.193.96/`.
 
----
 
 ## 5. Diagnóstico y solución del bloqueo SSH (Capa 3 y 4: Network ACL)
 
@@ -275,9 +270,8 @@ Una vez eliminada la regla, el tráfico al puerto 22 fue procesado por la regla 
 ![Sesión SSH activa y verificación de hostname](./images/Imagen%20pegada%20(9).png)
 *Figura 9: Sesión SSH abierta en la instancia y verificación del nombre de host `web-server`.*
 
----
 
-## 6. Análisis forense de tráfico con VPC Flow Logs
+## 6. Análisis de tráfico con VPC Flow Logs
 
 Para validar con evidencia concreta el comportamiento de los paquetes durante las fallas, descargamos los registros que Flow Logs estuvo depositando en S3.
 
@@ -314,7 +308,6 @@ Los registros reflejaron con exactitud los intentos de conexión SSH realizados 
 - El puerto destino era el 22 con protocolo 6 (TCP).
 - La acción asentada fue `REJECT`, confirmando que el descarte se produjo en la regla 40 de la NACL.
 
----
 
 ## 7. Comparativa de componentes de red y seguridad
 
@@ -323,8 +316,6 @@ Los registros reflejaron con exactitud los intentos de conexión SSH realizados 
 | **Tabla de enrutamiento** | Capa 3 (Red) | Subred | Determinista por prefijo de destino | Descartaba paquetes de retorno web al carecer de ruta `0.0.0.0/0 -> IGW`. |
 | **Network ACL (NACL)** | Capa 3 y 4 (Red / Transporte) | Perímetro de subred | Sin estado (*Stateless*), evaluación en orden numérico ascendente | La regla 40 bloqueaba el puerto 22 antes de evaluar la regla permisiva 100. |
 | **Security Group** | Capa 4 (Transporte) | Interfaz virtual (ENI) | Con estado (*Stateful*), solo admite reglas de permiso | Tenía abiertos los puertos 80 y 22, por lo que no causó bloqueos. |
-
----
 
 ## 8. Conclusiones
 
