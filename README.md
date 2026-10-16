@@ -16,7 +16,8 @@ El laboratorio plantea un escenario de resolución de incidentes en una infraest
 2. **VPC2 (Gestión y diagnóstico):** Aloja una instancia `cli-host` con salida a Internet para ejecutar diagnósticos con AWS CLI y emular peticiones de clientes externos.
 3. **Amazon S3:** Bucket de almacenamiento para recolectar los registros de tráfico generados por VPC Flow Logs.
 
-![[Pasted image 20261016093046.png]]
+![Topología y arquitectura de red de Amazon VPC](./images/Pasted%20image%2020261016093046.png)
+*Diagrama 1: Topología lógica, segmentación en VPCs y puntos de falla identificados.*
 
 
 ## 2. Inicialización y configuración de AWS CLI
@@ -115,7 +116,8 @@ aws ec2 describe-route-tables \
 
 El paquete inicial de conexión `TCP SYN` del cliente entraba por el Internet Gateway y llegaba al servidor, pero al responder con `TCP SYN-ACK`, el router virtual de la VPC no tenía ninguna ruta para enviar paquetes hacia la IP pública del cliente y los descartaba silenciosamente.
 
-![[Pasted image 20261016094110.png]]
+![Flujo de tráfico TCP y descarte por asimetría de enrutamiento](./images/Pasted%20image%2020261016094110.png)
+*Diagrama 2: Flujo TCP SYN/SYN-ACK y descarte asimétrico por ausencia de ruta por defecto hacia el Internet Gateway.*
 
 Para corregir la asimetría de enrutamiento, agregamos la ruta por defecto hacia el Internet Gateway `igw-012807cfae2615a2e`:
 
